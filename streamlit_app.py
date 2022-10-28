@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import functionalities as tools
+from PIL import Image
+image = Image.open('spotify_logo.png')
 
 locations = {'Italy': [12.674297, 42.6384261], 'Philippines': [122.7312101, 12.7503486],
              'Taiwan': [120.9820179, 23.9739374], 'Portugal': [-8.1353519, 39.6621648],
@@ -47,20 +49,21 @@ st.set_page_config(page_title=page_title, page_icon=page_icon)
 st.title(page_title + " " + page_icon)
 
 song_names = tools.get_names("")
-countries = tools.get_countries()
-# countries.remove("global")
-# countries = tools.expand_abr(countries)
+aux_countries = tools.get_countries()
+aux_countries.remove("global")
+aux_countries = tools.expand_abr(aux_countries)
+countries = ["Global"]
+for c in aux_countries:
+    countries.append(c)
 # pd.concat([countries, pd.Series(["global"])])
 
 with st.sidebar:
+    st.image(image, width=150)
     st.header("Filters")
 
     st.metric("Registered songs", len(song_names))
+    country = st.selectbox("Select country", countries)
     song = st.selectbox("Select a song to inspect", song_names)
-    ab_country = st.checkbox("Global", value=True)
-    country = st.selectbox("Select countries", countries)
-    # if ab_country:
-    #     country = "global"
     start_date = st.date_input("Select a date to start",
                                min_value=datetime.date(2014, 8, 10),
                                max_value=datetime.date(2022, 10, 17),
@@ -68,13 +71,14 @@ with st.sidebar:
 
 
 with st.container():
-    with st.expander("All songs data"):
-        if country == "global":
+    with st.expander("All songs data in " + country):
+        if country == "Global":
             all_tracks = tools.request({})
         else:
-            all_tracks = tools.request({"country": country})
+            country_aux = tools.generate_abr(country)
+            all_tracks = tools.request({"country": country_aux})
         streams_by_genre = {}
-        total_streams = 0
+        total_country_streams = 0
         total_explicit = {"True": 0, "False": 0}
         for t in all_tracks:
             name = t["name"]
@@ -94,9 +98,11 @@ with st.container():
                     streams_by_genre[g] += t["streams"]
                 else:
                     streams_by_genre[g] = t["streams"]
-                total_streams += t["streams"]
-
-        st.metric("Total streams", tools.millify(total_streams))
+            total_country_streams += t["streams"]
+        total_streams = tools.get_all_streams()
+        percentage = (total_country_streams / total_streams)*100
+        st.metric("Total streams", tools.millify(total_country_streams))
+        st.write(str(round(percentage,2)) + "% of global streams")
 
         # Genre distribution pie chart
         genre_distribution = {"Genre": [], "Streams": []}
@@ -108,7 +114,7 @@ with st.container():
         names = genres_dataframe["Genre"]
         values = genres_dataframe["Streams"]
 
-        fig = px.pie(genres_dataframe, values=values, names=names, title="Genre distribution")
+        fig = px.pie(genres_dataframe, values=values, names=names, title=country + " Genre Distribution")
         fig.update_layout(legend_title_text="Genre")
         fig.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig, use_container_width=True)
@@ -123,21 +129,24 @@ with st.container():
         names = explicit_dataframe["Explicit"]
         values = explicit_dataframe["Number of songs"]
 
-        fig = px.pie(genres_dataframe, values=values, names=names, title="Explicit content proportion")
+        fig = px.pie(genres_dataframe, values=values, names=names, title=country + " Explicit Content Proportion")
         fig.update_layout(legend_title_text="Is explicit")
         fig.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig, use_container_width=True)
-    with st.expander("Filtered data"):
-        st.write(song)
+    with st.expander("'"+song+"'" + " Data"):
+        st.write("Selected song to inspec: " + song)
         song_countries = tools.get_countries_by_song(song)
 
         df = []
         for c in song_countries:
             df.append(locations[c])
         df = pd.DataFrame(df, columns=["lon", "lat"])
+
+        st.subheader("Countries where the song got popular")
         st.map(df)
 
-        time_progression = tools.get_time_interval(song)
+        st.subheader("Positions changes from " + start_date.strftime("%Y-%m-%d") + " to last registered")
+        time_progression = tools.get_time_interval(song, start_date.strftime("%Y-%m-%d"))
         fig = px.line(time_progression, x="Dates", y="Positions")
         st.plotly_chart(fig, use_container_width=True)
 

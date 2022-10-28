@@ -1,3 +1,4 @@
+import datetime
 import math
 import pymongo
 import streamlit as st
@@ -34,6 +35,7 @@ def expand_abr(countries):
         lambda x: pycountry.countries.get(alpha_3=x).name if len(x) == 3 else pycountry.countries.get(alpha_2=x).name)
 
     for i in range(0, len(new_c)):
+        print(new_c[i])
         new_c[i] = new_c[i].split(",")[0]
         if new_c[i] == "Russian Federation":
             new_c[i] = "Russia"
@@ -42,6 +44,20 @@ def expand_abr(countries):
         if new_c[i] == "Korea":
             new_c[i] = "South Korea"
     return new_c
+
+
+def generate_abr(country):
+    if country == "Taiwan":
+        country = "Taiwan, Province of China"
+    elif country == "Bolivia":
+        country = "Bolivia, Plurinational State of"
+    elif country == "South Korea":
+        country = "Korea, Republic of"
+    elif country == "Russia":
+        country = "Russian Federation"
+
+    abr = pycountry.countries.get(name=country)
+    return abr.alpha_2.lower()
 
 
 def get_location(countries):
@@ -147,16 +163,21 @@ def millify(n):
     return '{:.0f}{}'.format(n / 10 ** (3 * millidx), millnames[millidx])
 
 
-def get_time_interval(song):
+def get_time_interval(song, start):
+    start = start.split("-")
+    start_date = datetime.date(int(start[0]), int(start[1]), int(start[2]))
     track_info = request({"name": song})
     dates = {}
     for item in track_info:
-        date = item["date"]
-        if date in dates.keys():
-            if dates[date] < item["position"]:
+        date = item["date"].split("-")
+        date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
+        if date >= start_date:
+            date = date.strftime("%Y-%m-%d")
+            if date in dates.keys():
+                if dates[date] < item["position"]:
+                    dates[date] = item["position"]
+            else:
                 dates[date] = item["position"]
-        else:
-            dates[date] = item["position"]
 
     od = collections.OrderedDict(sorted(dates.items()))
 
@@ -169,10 +190,17 @@ def get_time_interval(song):
     return df
 
 
+def get_all_streams():
+    all_tracks = request({})
+    total_streams = 0
+    i=0
+    for item in all_tracks:
+        i+=1
+        total_streams += item["streams"]
+    print(i)
+    return total_streams
+
+
 if __name__ == '__main__':
-    s = get_countries()
-    s.remove("global")
-    print(s)
-    s = expand_abr(s)
-    print(s)
+    print(get_all_streams())
 
