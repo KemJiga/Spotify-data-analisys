@@ -53,6 +53,7 @@ aux_countries = tools.get_countries()
 aux_countries.remove("global")
 aux_countries = tools.expand_abr(aux_countries)
 countries = ["Global"]
+
 for c in aux_countries:
     countries.append(c)
 # pd.concat([countries, pd.Series(["global"])])
@@ -68,7 +69,6 @@ with st.sidebar:
                                min_value=datetime.date(2014, 8, 10),
                                max_value=datetime.date(2022, 10, 17),
                                value=datetime.date(2014, 8, 10))
-
 
 with st.container():
     with st.expander("All songs data in " + country):

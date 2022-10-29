@@ -1,10 +1,7 @@
-datetime
-math
 pycountry
 numpy
-geopy.exc
-geopy.geocoders
-collections
+geopy
+collection
 streamlit
 plotly.express
 pandas
