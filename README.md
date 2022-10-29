@@ -1,4 +1,4 @@
-# Spotify-data-analisys
+# Spotify-data-analysis
 Before using the app, please install the database.
 
 For installing the databse:
